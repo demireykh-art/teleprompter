@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>텔레프롬프터</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      background-color: black;
+    }
+    
+    /* 컨트롤 패널 */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px;
+      background: #111;
+      border-bottom: 1px solid #333;
+      z-index: 100;
+    }
+    
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+      white-space: nowrap;
+      -webkit-appearance: none;
+      appearance: none;
+      touch-action: manipulation;
+    }
+    
+    .btn:active {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+    
+    .btn-upload { background: #2563eb; }
+    .btn-mirror { background: #4b5563; }
+    .btn-mirror.active { background: #16a34a; }
+    .btn-play { background: #16a34a; }
+    .btn-play.playing { background: #ca8a04; }
+    .btn-reset { background: #dc2626; }
+    .btn-fullscreen { background: #7c3aed; }
+    .btn-color { background: #4b5563; }
+    
+    .adjuster {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: #1f2937;
+      border-radius: 8px;
+      padding: 4px 8px;
+    }
+    
+    .adjuster .btn {
+      padding: 8px 12px;
+      background: #374151;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 6px;
+    }
+    
+    .adjuster .btn:active {
+      background: #4b5563;
+    }
+    
+    .adjuster-value {
+      font-size: 13px;
+      color: white;
+      min-width: 55px;
+      text-align: center;
+    }
+    
+    .adjuster-label {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-right: 4px;
+    }
+    
+    /* 색상 선택기 */
+    .color-picker {
+      position: relative;
+    }
+    
+    .color-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 8px;
+      padding: 10px;
+      background: #1f2937;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+      display: none;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      z-index: 200;
+      min-width: 180px;
+    }
+    
+    .color-menu.show {
+      display: grid;
+    }
+    
+    .color-option {
+      padding: 12px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 2px solid #374151;
+      text-align: center;
+      cursor: pointer;
+    }
+    
+    .color-option:active {
+      transform: scale(0.95);
+    }
+    
+    /* 텔레프롬프터 화면 */
+    .prompter {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      background-color: black;
+    }
+    
+    .prompter-content {
+      position: absolute;
+      width: 100%;
+      padding: 80px 24px;
+    }
+    
+    .prompter-text {
+      white-space: pre-wrap;
+      text-align: center;
+      line-height: 1.7;
+      word-break: keep-all;
+      font-size: 32px;
+      color: white;
+    }
+    
+    .guide-line {
+      position: absolute;
+      top: 33%;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #ef4444;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    
+    /* 텍스트 입력 영역 */
+    .input-section {
+      background: #111;
+      border-top: 1px solid #333;
+    }
+    
+    .input-toggle {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: none;
+      color: #9ca3af;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+      -webkit-appearance: none;
+    }
+    
+    .input-toggle:active {
+      background: #1f2937;
+    }
+    
+    .input-area {
+      display: none;
+      padding: 0 10px 10px;
+    }
+    
+    .input-area.show {
+      display: block;
+    }
+    
+    .input-area textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      background: #1f2937;
+      border: 2px solid #374151;
+      border-radius: 8px;
+      color: white;
+      font-size: 15px;
+      resize: none;
+      -webkit-appearance: none;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    
+    .input-area textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+    
+    /* 숨김 파일 입력 */
+    .hidden-input {
+      position: absolute;
+      left: -9999px;
+      opacity: 0;
+    }
+    
+    /* 전체화면에서 입력 숨기기 */
+    .app.fullscreen .input-section {
+      display: none;
+    }
+    
+    /* 아이콘 */
+    .icon {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- 컨트롤 패널 -->
+    <div class="controls">
+      <div class="control-group">
+        <button type="button" class="btn btn-upload" id="uploadBtn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>업로드</span>
+        </button>
+        <input type="file" accept=".txt,.md,.text" class="hidden-input" id="fileInput">
+        
+        <button type="button" class="btn btn-mirror" id="mirrorBtn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><path d="M12 20v2"/><path d="M12 14v2"/><path d="M12 8v2"/><path d="M12 2v2"/></svg>
+          <span>반전</span>
+        </button>
+        
+        <div class="adjuster">
+          <span class="adjuster-label">크기</span>
+          <button type="button" class="btn" id="fontMinus">−</button>
+          <span class="adjuster-value" id="fontSizeDisplay">32</span>
+          <button type="button" class="btn" id="fontPlus">+</button>
+        </div>
+        
+        <div class="color-picker">
+          <button type="button" class="btn btn-color" id="colorBtn">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+            <span>색상</span>
+          </button>
+          <div class="color-menu" id="colorMenu">
+            <div class="color-option" style="background:black;color:white" data-bg="black" data-text="white">검정/흰색</div>
+            <div class="color-option" style="background:#001a00;color:#00ff00" data-bg="#001a00" data-text="#00ff00">녹색</div>
+            <div class="color-option" style="background:#1a1a2e;color:#eaeaea" data-bg="#1a1a2e" data-text="#eaeaea">다크블루</div>
+            <div class="color-option" style="background:white;color:black" data-bg="white" data-text="black">흰색/검정</div>
+            <div class="color-option" style="background:#2d2d2d;color:#ffd700" data-bg="#2d2d2d" data-text="#ffd700">골드</div>
+            <div class="color-option" style="background:#0d1117;color:#58a6ff" data-bg="#0d1117" data-text="#58a6ff">블루</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="control-group">
+        <div class="adjuster">
+          <span class="adjuster-label">속도</span>
+          <button type="button" class="btn" id="speedMinus">−</button>
+          <span class="adjuster-value" id="speedDisplay">50</span>
+          <button type="button" class="btn" id="speedPlus">+</button>
+        </div>
+        
+        <button type="button" class="btn btn-play" id="playBtn">
+          <svg class="icon play-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <svg class="icon pause-icon" viewBox="0 0 24 24" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          <span id="playText">시작</span>
+        </button>
+        
+        <button type="button" class="btn btn-reset" id="resetBtn">
+          <svg class="icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          <span>리셋</span>
+        </button>
+        
+        <button type="button" class="btn btn-fullscreen" id="fullscreenBtn">
+          <svg class="icon maximize-icon" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <svg class="icon minimize-icon" viewBox="0 0 24 24" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <span id="fullscreenText">전체</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- 텔레프롬프터 화면 -->
+    <div class="prompter" id="prompter">
+      <div class="prompter-content" id="prompterContent">
+        <div class="prompter-text" id="prompterText">텔레프롬프터에 표시할 텍스트를 입력하거나
+문서 파일을 업로드하세요.
+
+스타트 버튼을 누르면 텍스트가
+위로 스크롤됩니다.
+
+속도 조절 버튼으로
+스크롤 속도를 변경할 수 있습니다.</div>
+      </div>
+      <div class="guide-line"></div>
+    </div>
+    
+    <!-- 텍스트 입력 -->
+    <div class="input-section" id="inputSection">
+      <button type="button" class="input-toggle" id="inputToggle">텍스트 직접 입력 ▼</button>
+      <div class="input-area" id="inputArea">
+        <textarea id="textInput" placeholder="여기에 텍스트를 입력하세요...">텔레프롬프터에 표시할 텍스트를 입력하거나
+문서 파일을 업로드하세요.
+
+스타트 버튼을 누르면 텍스트가
+위로 스크롤됩니다.
+
+속도 조절 버튼으로
+스크롤 속도를 변경할 수 있습니다.</textarea>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // 상태 변수
+      var isPlaying = false;
+      var isMirrored = false;
+      var speed = 50;
+      var fontSize = 32;
+      var scrollPos = 0;
+      var bgColor = 'black';
+      var textColor = 'white';
+      var lastTime = null;
+      var animationId = null;
+
+      // DOM 요소
+      var app = document.getElementById('app');
+      var prompter = document.getElementById('prompter');
+      var prompterContent = document.getElementById('prompterContent');
+      var prompterText = document.getElementById('prompterText');
+      var textInput = document.getElementById('textInput');
+      var fileInput = document.getElementById('fileInput');
+      var uploadBtn = document.getElementById('uploadBtn');
+      
+      var playBtn = document.getElementById('playBtn');
+      var playIcon = playBtn.querySelector('.play-icon');
+      var pauseIcon = playBtn.querySelector('.pause-icon');
+      var playText = document.getElementById('playText');
+      
+      var mirrorBtn = document.getElementById('mirrorBtn');
+      var resetBtn = document.getElementById('resetBtn');
+      var fullscreenBtn = document.getElementById('fullscreenBtn');
+      var maximizeIcon = fullscreenBtn.querySelector('.maximize-icon');
+      var minimizeIcon = fullscreenBtn.querySelector('.minimize-icon');
+      var fullscreenText = document.getElementById('fullscreenText');
+      
+      var fontMinus = document.getElementById('fontMinus');
+      var fontPlus = document.getElementById('fontPlus');
+      var fontSizeDisplay = document.getElementById('fontSizeDisplay');
+      
+      var speedMinus = document.getElementById('speedMinus');
+      var speedPlus = document.getElementById('speedPlus');
+      var speedDisplay = document.getElementById('speedDisplay');
+      
+      var colorBtn = document.getElementById('colorBtn');
+      var colorMenu = document.getElementById('colorMenu');
+      var colorOptions = document.querySelectorAll('.color-option');
+      
+      var inputToggle = document.getElementById('inputToggle');
+      var inputArea = document.getElementById('inputArea');
+
+      // 유틸리티 함수
+      function updateColors() {
+        app.style.backgroundColor = bgColor;
+        prompter.style.backgroundColor = bgColor;
+        prompterText.style.color = textColor;
+      }
+
+      function updateFontSize() {
+        fontSizeDisplay.textContent = fontSize;
+        prompterText.style.fontSize = fontSize + 'px';
+      }
+
+      function updateScroll() {
+        prompterContent.style.transform = 'translateY(-' + scrollPos + 'px)';
+      }
+
+      function startPlaying() {
+        isPlaying = true;
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = 'block';
+        playText.textContent = '정지';
+        playBtn.classList.add('playing');
+        lastTime = null;
+        requestAnimationFrame(animate);
+      }
+
+      function stopPlaying() {
+        isPlaying = false;
+        playIcon.style.display = 'block';
+        pauseIcon.style.display = 'none';
+        playText.textContent = '시작';
+        playBtn.classList.remove('playing');
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+      }
+
+      function animate(timestamp) {
+        if (!isPlaying) return;
+        
+        if (lastTime === null) {
+          lastTime = timestamp;
+        }
+        
+        var delta = timestamp - lastTime;
+        lastTime = timestamp;
+        
+        scrollPos += (speed * delta) / 1000;
+        updateScroll();
+        
+        animationId = requestAnimationFrame(animate);
+      }
+
+      // 터치/클릭 이벤트 헬퍼
+      function addTapEvent(element, handler) {
+        element.addEventListener('click', handler);
+        element.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          handler(e);
+        });
+      }
+
+      // 초기화
+      updateColors();
+      updateFontSize();
+
+      // 이벤트: 업로드 버튼
+      addTapEvent(uploadBtn, function(e) {
+        e.preventDefault();
+        fileInput.click();
+      });
+
+      // 이벤트: 파일 선택
+      fileInput.addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        
+        var reader = new FileReader();
+        reader.onload = function(event) {
+          var content = event.target.result;
+          textInput.value = content;
+          prompterText.textContent = content;
+          scrollPos = 0;
+          updateScroll();
+          stopPlaying();
+        };
+        reader.readAsText(file);
+      });
+
+      // 이벤트: 텍스트 입력
+      textInput.addEventListener('input', function() {
+        prompterText.textContent = textInput.value;
+      });
+
+      // 이벤트: 재생/정지
+      addTapEvent(playBtn, function(e) {
+        e.preventDefault();
+        if (isPlaying) {
+          stopPlaying();
+        } else {
+          startPlaying();
+        }
+      });
+
+      // 이벤트: 좌우반전
+      addTapEvent(mirrorBtn, function(e) {
+        e.preventDefault();
+        isMirrored = !isMirrored;
+        if (isMirrored) {
+          mirrorBtn.classList.add('active');
+          prompter.style.transform = 'scaleX(-1)';
+        } else {
+          mirrorBtn.classList.remove('active');
+          prompter.style.transform = 'none';
+        }
+      });
+
+      // 이벤트: 리셋
+      addTapEvent(resetBtn, function(e) {
+        e.preventDefault();
+        stopPlaying();
+        scrollPos = 0;
+        updateScroll();
+      });
+
+      // 이벤트: 전체화면
+      addTapEvent(fullscreenBtn, function(e) {
+        e.preventDefault();
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          if (app.requestFullscreen) {
+            app.requestFullscreen();
+          } else if (app.webkitRequestFullscreen) {
+            app.webkitRequestFullscreen();
+          }
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+        }
+      });
+
+      // 전체화면 변경 감지
+      function onFullscreenChange() {
+        var isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        if (isFullscreen) {
+          app.classList.add('fullscreen');
+          maximizeIcon.style.display = 'none';
+          minimizeIcon.style.display = 'block';
+          fullscreenText.textContent = '축소';
+        } else {
+          app.classList.remove('fullscreen');
+          maximizeIcon.style.display = 'block';
+          minimizeIcon.style.display = 'none';
+          fullscreenText.textContent = '전체';
+        }
+      }
+      document.addEventListener('fullscreenchange', onFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+      // 이벤트: 글자 크기 조절
+      addTapEvent(fontMinus, function(e) {
+        e.preventDefault();
+        fontSize = Math.max(16, fontSize - 4);
+        updateFontSize();
+      });
+
+      addTapEvent(fontPlus, function(e) {
+        e.preventDefault();
+        fontSize = Math.min(80, fontSize + 4);
+        updateFontSize();
+      });
+
+      // 이벤트: 속도 조절
+      addTapEvent(speedMinus, function(e) {
+        e.preventDefault();
+        speed = Math.max(10, speed - 10);
+        speedDisplay.textContent = speed;
+      });
+
+      addTapEvent(speedPlus, function(e) {
+        e.preventDefault();
+        speed = Math.min(200, speed + 10);
+        speedDisplay.textContent = speed;
+      });
+
+      // 이벤트: 색상 버튼
+      addTapEvent(colorBtn, function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (colorMenu.classList.contains('show')) {
+          colorMenu.classList.remove('show');
+        } else {
+          colorMenu.classList.add('show');
+        }
+      });
+
+      // 이벤트: 색상 옵션 선택
+      for (var i = 0; i < colorOptions.length; i++) {
+        (function(option) {
+          addTapEvent(option, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            bgColor = option.getAttribute('data-bg');
+            textColor = option.getAttribute('data-text');
+            updateColors();
+            colorMenu.classList.remove('show');
+          });
+        })(colorOptions[i]);
+      }
+
+      // 색상 메뉴 외부 클릭시 닫기
+      document.addEventListener('click', function(e) {
+        if (!colorBtn.contains(e.target) && !colorMenu.contains(e.target)) {
+          colorMenu.classList.remove('show');
+        }
+      });
+      document.addEventListener('touchend', function(e) {
+        if (!colorBtn.contains(e.target) && !colorMenu.contains(e.target)) {
+          colorMenu.classList.remove('show');
+        }
+      });
+
+      // 이벤트: 텍스트 입력 토글
+      addTapEvent(inputToggle, function(e) {
+        e.preventDefault();
+        if (inputArea.classList.contains('show')) {
+          inputArea.classList.remove('show');
+          inputToggle.textContent = '텍스트 직접 입력 ▼';
+        } else {
+          inputArea.classList.add('show');
+          inputToggle.textContent = '텍스트 직접 입력 ▲';
+        }
+      });
+
+      // 키보드 단축키
+      document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'TEXTAREA') return;
+        
+        switch(e.code) {
+          case 'Space':
+            e.preventDefault();
+            if (isPlaying) {
+              stopPlaying();
+            } else {
+              startPlaying();
+            }
+            break;
+          case 'KeyR':
+            e.preventDefault();
+            stopPlaying();
+            scrollPos = 0;
+            updateScroll();
+            break;
+          case 'KeyM':
+            e.preventDefault();
+            mirrorBtn.click();
+            break;
+          case 'KeyF':
+            e.preventDefault();
+            fullscreenBtn.click();
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            speed = Math.min(200, speed + 10);
+            speedDisplay.textContent = speed;
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            speed = Math.max(10, speed - 10);
+            speedDisplay.textContent = speed;
+            break;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
